@@ -4,8 +4,7 @@ using System.Text;
 
 namespace RENTALFUTSAL_KPLHEBAT.Models
 {
-    //Arkananta Odysa
-    internal class Booking
+    public sealed class Booking
     {
         public int Id { get; set; }
         public int FieldId { get; set; }

@@ -5,16 +5,18 @@ using RENTALFUTSAL_KPLHEBAT.Models;
 
 namespace RENTALFUTSAL_KPLHEBAT.Services
 {
-    internal class BookingService
+    public sealed class BookingService
     {
         private readonly JsonDataStore<Booking> _bookingStore;
         private readonly FieldService _fieldService;
+        private readonly ScheduleService _scheduleService;
         private readonly BookingStateMachine _stateMachine;
 
-        public BookingService(JsonDataStore<Booking> bookingStore, FieldService fieldService, BookingStateMachine stateMachine)
+        public BookingService(JsonDataStore<Booking> bookingStore, FieldService fieldService, ScheduleService scheduleService, BookingStateMachine stateMachine)
         {
             _bookingStore = bookingStore ?? throw new ArgumentNullException(nameof(bookingStore));
             _fieldService = fieldService ?? throw new ArgumentNullException(nameof(fieldService));
+            _scheduleService = scheduleService ?? throw new ArgumentNullException(nameof(scheduleService));
             _stateMachine = stateMachine ?? throw new ArgumentNullException(nameof(stateMachine));
         }
 
@@ -63,24 +65,20 @@ namespace RENTALFUTSAL_KPLHEBAT.Services
                 return OperationResult<Booking>.Fail("Jam mulai harus tepat per jam, contoh 18:00.");
             }
 
-            TimeOnly endTime = startTime.AddHours(durationHours);
-            if (startTime < new TimeOnly(8, 0) || endTime > new TimeOnly(23, 0))
+            TimeSpan start = startTime.ToTimeSpan();
+            TimeSpan end = start.Add(TimeSpan.FromHours(durationHours));
+            if (start < TimeSpan.FromHours(8) || end > TimeSpan.FromHours(23))
             {
                 return OperationResult<Booking>.Fail("Jam booking hanya boleh dari 08:00 sampai 23:00.");
             }
 
-            List<Booking> bookings = _bookingStore.Load();
-            bool isConflict = bookings.Any(existing =>
-                existing.FieldId == fieldId &&
-                existing.Date == date &&
-                existing.Status != BookingStatus.Cancelled &&
-                IsTimeOverlap(startTime, endTime, existing.StartTime, existing.EndTime));
-
-            if (isConflict)
+            OperationResult<bool> availabilityResult = _scheduleService.IsAvailable(fieldId, date, startTime, durationHours);
+            if (!availabilityResult.Success || !availabilityResult.Data)
             {
-                return OperationResult<Booking>.Fail("Jadwal bentrok. Pilih jam atau lapangan lain.");
+                return OperationResult<Booking>.Fail(availabilityResult.Message);
             }
 
+            List<Booking> bookings = _bookingStore.Load();
             int nextId = bookings.Count == 0 ? 1 : bookings.Max(booking => booking.Id) + 1;
             Booking newBooking = new()
             {
