@@ -1,0 +1,20 @@
+[
+    {
+        "Id": 1,
+        "Name": "Lapangan A",
+        "PricePerHour": 100000,
+        "IsActive": true
+    },
+    {
+        "Id": 2,
+        "Name": "Lapangan B",
+        "PricePerHour": 120000,
+        "IsActive": true
+    },
+    {
+        "Id": 3,
+        "Name": "Lapangan C",
+        "PricePerHour": 150000,
+        "IsActive": true
+    }
+]
